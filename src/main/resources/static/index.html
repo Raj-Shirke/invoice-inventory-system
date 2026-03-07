@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Invoice & Inventory Dashboard</title>
+    <style>
+      body {
+        font-family: Arial;
+        margin: 20px;
+        background-color: #f4f4f4;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+      }
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+      th {
+        background-color: #007bff;
+        color: white;
+      }
+      .btn {
+        padding: 5px 10px;
+        cursor: pointer;
+        color: white;
+        border: none;
+        border-radius: 3px;
+      }
+      .btn-sell {
+        background-color: #28a745;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Inventory Management System</h2>
+    <div
+      id="addProductForm"
+      style="
+        background: #fff;
+        padding: 15px;
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+      "
+    >
+      <h3>Add New Product</h3>
+      <input type="text" id="newName" placeholder="Product Name" required />
+      <input
+        type="number"
+        id="newPrice"
+        placeholder="Price"
+        step="0.01"
+        required
+      />
+      <input type="number" id="newQty" placeholder="Quantity" required />
+      <button
+        onclick="addNewProduct()"
+        class="btn"
+        style="background-color: #007bff"
+      >
+        Add to Inventory
+      </button>
+    </div>
+    <div
+      id="invoiceSection"
+      style="
+        display: none;
+        background: #fff;
+        padding: 20px;
+        border: 2px solid #333;
+        margin-bottom: 20px;
+      "
+    >
+      <h3>RETAIL INVOICE</h3>
+      <p id="invoiceDetails"></p>
+      <button onclick="window.print()">Print Invoice</button>
+      <button
+        onclick="
+          document.getElementById('invoiceSection').style.display = 'none'
+        "
+      >
+        Close
+      </button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="productTableBody"></tbody>
+    </table>
+
+    <script>
+      // Fetch products from your API and display them
+      fetch("/api/products")
+        .then((response) => response.json())
+        .then((products) => {
+          const body = document.getElementById("productTableBody");
+          products.forEach((p) => {
+            body.innerHTML += `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.name}</td>
+                            <td>${p.price}</td>
+                            <td>${p.quantity}</td>
+                            <td><button class="btn btn-sell" onclick="sellItem(${p.id})">Sell 1</button></td>
+                        </tr>`;
+          });
+        });
+
+      function addNewProduct() {
+        const productData = {
+          name: document.getElementById("newName").value,
+          price: parseFloat(document.getElementById("newPrice").value),
+          quantity: parseInt(document.getElementById("newQty").value),
+        };
+
+        fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData),
+        }).then((response) => {
+          if (response.ok) {
+            alert("Product Added Successfully!");
+            // Clear inputs
+            document.getElementById("newName").value = "";
+            document.getElementById("newPrice").value = "";
+            document.getElementById("newQty").value = "";
+            loadProducts(); // Refresh the table
+          } else {
+            alert("Error adding product");
+          }
+        });
+      }
+
+      function sellItem(id) {
+        const qty = 1; // You can change this to prompt for quantity later
+        fetch(`/api/products/sell/${id}/${qty}`, { method: "POST" })
+          .then((res) => res.text())
+          .then((msg) => {
+            // Show the invoice section
+            document.getElementById("invoiceSection").style.display = "block";
+            // Clean up the text message to look like an invoice
+            document.getElementById("invoiceDetails").innerText = msg;
+
+            // Reload the table data in the background
+            loadProducts();
+          });
+      }
+
+      // Move the fetch logic into a function so we can refresh easily
+      function loadProducts() {
+        const body = document.getElementById("productTableBody");
+        body.innerHTML = ""; // Clear old data
+        fetch("/api/products")
+          .then((response) => response.json())
+          .then((products) => {
+            products.forEach((p) => {
+              body.innerHTML += `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td>${p.name}</td>
+                        <td>${p.price}</td>
+                        <td>${p.quantity}</td>
+                        <td><button class="btn btn-sell" onclick="sellItem(${p.id})">Sell 1</button></td>
+                    </tr>`;
+            });
+          });
+      }
+      loadProducts();
+    </script>
+  </body>
+</html>
